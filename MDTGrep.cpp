@@ -5,6 +5,8 @@
 
 SCDLLName("MDTGrep")
 
+#define OUTPUT_DIR "C:\\SierraChart\\SCAssistData\\"
+
 SCSFExport scsf_MDTGrep(SCStudyInterfaceRef sc)
 {
     // Configuration
@@ -21,8 +23,8 @@ SCSFExport scsf_MDTGrep(SCStudyInterfaceRef sc)
         sc.Input[0].SetYesNo(1);
 
         // Input to control the filename suffix
-        sc.Input[1].Name = "Export File Suffix (e.g. _60s, _tick)";
-        sc.Input[1].SetString("_tick"); 
+        sc.Input[1].Name = "Export File Suffix (e.g. _bars, _1min)";
+        sc.Input[1].SetString("_bars");
 
         return;
     }
@@ -46,18 +48,30 @@ SCSFExport scsf_MDTGrep(SCStudyInterfaceRef sc)
     if (ExportDone == 1)
         return; // Already exported this session
         
+    // Initialization — create output directory once
+    {
+        static bool initialized = false;
+        if (!initialized)
+        {
+            initialized = true;
+            CreateDirectoryA(OUTPUT_DIR, NULL);
+            sc.AddMessageToLog("MDTGrep: SCAssistData directory ready", 1);
+        }
+    }
+
     // Execute export if we have data
-    if (sc.ArraySize == 0) 
+    if (sc.ArraySize == 0)
         return;
 
-    // Determine the export filename (e.g., ESM4_tick.csv)
+    // Determine the export filename: {SYMBOL}{_suffix}.csv in SCAssistData
+    // e.g. ESM6_bars.csv or ESM6_1min.csv
     SCString Symbol = sc.Symbol;
     SCString Suffix = sc.Input[1].GetString();
     if (Suffix.IsEmpty())
-        Suffix = "_data";
+        Suffix = "_bars";
 
     SCString Filename;
-    Filename.Format("%s\\%s%s.csv", sc.DataFilesFolder().GetChars(), Symbol.GetChars(), Suffix.GetChars());
+    Filename.Format("%s%s%s.csv", OUTPUT_DIR, Symbol.GetChars(), Suffix.GetChars());
 
     std::ofstream OutFile(Filename.GetChars(), std::ios::out | std::ios::trunc);
     if (!OutFile.is_open())
